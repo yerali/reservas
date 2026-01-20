@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inscripción por Slots</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 16px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+            color: #333;
+            cursor: pointer;
+        }
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        .slot {
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+        }
+        .slot.available {
+            background: #f0f9ff;
+            border-color: #0ea5e9;
+            cursor: pointer;
+        }
+        .slot.available:hover {
+            background: #e0f2fe;
+            transform: translateX(4px);
+        }
+        .slot.occupied {
+            background: #f9fafb;
+            border-color: #e5e7eb;
+        }
+        .slot-time {
+            font-weight: 600;
+            color: #333;
+            font-size: 16px;
+        }
+        .slot-status {
+            font-size: 14px;
+        }
+        .slot-status.available {
+            color: #0ea5e9;
+        }
+        .slot-status.occupied {
+            color: #6b7280;
+        }
+        .slot-name {
+            color: #059669;
+            font-weight: 500;
+        }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            max-width: 400px;
+            width: 100%;
+        }
+        .modal-title {
+            font-size: 20px;
+            margin-bottom: 16px;
+            color: #333;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            margin-bottom: 16px;
+        }
+        input:focus {
+            outline: none;
+            border-color: #0ea5e9;
+        }
+        .buttons {
+            display: flex;
+            gap: 12px;
+        }
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #0ea5e9;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0284c7;
+        }
+        .btn-primary:disabled {
+            background: #cbd5e1;
+            cursor: not-allowed;
+        }
+        .btn-secondary {
+            background: #e5e7eb;
+            color: #333;
+        }
+        .btn-secondary:hover {
+            background: #d1d5db;
+        }
+        .btn-delete {
+            padding: 4px 8px;
+            font-size: 12px;
+            background: #fee2e2;
+            color: #dc2626;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-delete:hover {
+            background: #fecaca;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div id="root">
+        <div class="container">
+            <div class="loading">Cargando slots...</div>
+        </div>
+    </div>
+
+    <!-- 
+        INSTRUCCIONES PARA EL PROFESOR:
+        Para RESETEAR TODOS LOS SLOTS y borrar todas las inscripciones,
+        haz DOBLE CLIC en el título "Inscripción por Slots"
+    -->
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase, ref, set, get, remove, onValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDMjqb4V8nZs9rMTgd-ScEDNajzeUj1hxs",
+            authDomain: "reservas-d1ba1.firebaseapp.com",
+            databaseURL: "https://reservas-d1ba1-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "reservas-d1ba1",
+            storageBucket: "reservas-d1ba1.firebasestorage.app",
+            messagingSenderId: "988989077182",
+            appId: "1:988989077182:web:f3784886d5ca9c256190ef"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        // Generate time slots
+        function generateSlots() {
+            const slots = [];
+            let hour = 10;
+            let minute = 30;
+            
+            while (hour < 19 || (hour === 19 && minute <= 30)) {
+                const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                slots.push({ time, key: time.replace(':', '') });
+                
+                minute += 15;
+                if (minute >= 60) {
+                    minute = 0;
+                    hour++;
+                }
+            }
+            return slots;
+        }
+
+        // Render app
+        function renderApp() {
+            const root = document.getElementById('root');
+            const allSlots = generateSlots();
+            let slotsData = {};
+            let selectedSlot = null;
+
+            // Load all slots data
+            async function loadSlots() {
+                const promises = allSlots.map(slot => {
+                    return get(ref(database, `slots/${slot.key}`))
+                        .then(snapshot => ({
+                            ...slot,
+                            name: snapshot.exists() ? snapshot.val() : null
+                        }))
+                        .catch(() => ({
+                            ...slot,
+                            name: null
+                        }));
+                });
+
+                const slots = await Promise.all(promises);
+                slotsData = {};
+                slots.forEach(slot => {
+                    slotsData[slot.key] = slot;
+                });
+                render();
+            }
+
+            // Subscribe to real-time updates
+            function subscribeToUpdates() {
+                allSlots.forEach(slot => {
+                    const slotRef = ref(database, `slots/${slot.key}`);
+                    onValue(slotRef, (snapshot) => {
+                        if (slotsData[slot.key]) {
+                            slotsData[slot.key].name = snapshot.exists() ? snapshot.val() : null;
+                            render();
+                        }
+                    });
+                });
+            }
+
+            // Handle slot click
+            function handleSlotClick(slot) {
+                if (!slot.name) {
+                    selectedSlot = slot;
+                    render();
+                    setTimeout(() => {
+                        const input = document.getElementById('nameInput');
+                        if (input) input.focus();
+                    }, 100);
+                }
+            }
+
+            // Handle submit
+            async function handleSubmit() {
+                const input = document.getElementById('nameInput');
+                const userName = input ? input.value.trim() : '';
+                
+                if (!userName || !selectedSlot) return;
+
+                try {
+                    await set(ref(database, `slots/${selectedSlot.key}`), userName);
+                    selectedSlot = null;
+                    render();
+                } catch (error) {
+                    alert('Error al guardar la inscripción');
+                }
+            }
+
+            // Handle delete
+            async function handleDelete(slot) {
+                if (confirm(`¿Eliminar la inscripción de ${slot.name}?`)) {
+                    try {
+                        await remove(ref(database, `slots/${slot.key}`));
+                    } catch (error) {
+                        alert('Error al eliminar la inscripción');
+                    }
+                }
+            }
+
+            // Handle reset
+            async function handleReset() {
+                if (confirm('⚠️ ATENCIÓN PROFESOR ⚠️\n\n¿Seguro que quieres BORRAR TODAS las inscripciones?\n\nEsta acción NO se puede deshacer.')) {
+                    try {
+                        const promises = allSlots.map(slot => 
+                            remove(ref(database, `slots/${slot.key}`)).catch(() => {})
+                        );
+                        await Promise.all(promises);
+                        alert('✅ Todos los slots han sido reseteados');
+                    } catch (error) {
+                        alert('Error al resetear los slots');
+                    }
+                }
+            }
+
+            // Render UI
+            function render() {
+                const slots = Object.values(slotsData).sort((a, b) => a.time.localeCompare(b.time));
+
+                root.innerHTML = `
+                    <div class="container">
+                        <h1 id="title">Inscripción por Slots</h1>
+                        <p class="subtitle">Selecciona un horario disponible (15 min cada slot)</p>
+                        
+                        ${slots.map(slot => `
+                            <div class="slot ${slot.name ? 'occupied' : 'available'}" data-key="${slot.key}">
+                                <span class="slot-time">${slot.time}</span>
+                                ${slot.name ? `
+                                    <div style="display: flex; align-items: center; gap: 12px">
+                                        <span class="slot-name">${slot.name}</span>
+                                        <button class="btn-delete" data-delete="${slot.key}">✕</button>
+                                    </div>
+                                ` : `
+                                    <span class="slot-status available">Disponible</span>
+                                `}
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    ${selectedSlot ? `
+                        <div class="modal" id="modal">
+                            <div class="modal-content">
+                                <h2 class="modal-title">Inscribirse - ${selectedSlot.time}</h2>
+                                <input type="text" id="nameInput" placeholder="Tu nombre" />
+                                <div class="buttons">
+                                    <button class="btn-secondary" id="cancelBtn">Cancelar</button>
+                                    <button class="btn-primary" id="submitBtn">Confirmar</button>
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+                `;
+
+                // Event listeners
+                document.getElementById('title').addEventListener('dblclick', handleReset);
+
+                document.querySelectorAll('.slot.available').forEach(el => {
+                    el.addEventListener('click', () => {
+                        const key = el.dataset.key;
+                        handleSlotClick(slotsData[key]);
+                    });
+                });
+
+                document.querySelectorAll('[data-delete]').forEach(el => {
+                    el.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const key = el.dataset.delete;
+                        handleDelete(slotsData[key]);
+                    });
+                });
+
+                if (selectedSlot) {
+                    const modal = document.getElementById('modal');
+                    const cancelBtn = document.getElementById('cancelBtn');
+                    const submitBtn = document.getElementById('submitBtn');
+                    const nameInput = document.getElementById('nameInput');
+
+                    modal.addEventListener('click', (e) => {
+                        if (e.target.id === 'modal') {
+                            selectedSlot = null;
+                            render();
+                        }
+                    });
+
+                    cancelBtn.addEventListener('click', () => {
+                        selectedSlot = null;
+                        render();
+                    });
+
+                    submitBtn.addEventListener('click', handleSubmit);
+
+                    nameInput.addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter') handleSubmit();
+                    });
+
+                    nameInput.addEventListener('input', () => {
+                        submitBtn.disabled = !nameInput.value.trim();
+                    });
+                }
+            }
+
+            // Initialize
+            loadSlots().then(() => {
+                subscribeToUpdates();
+            });
+        }
+
+        // Start app
+        renderApp();
+    </script>
+</body>
+</html>
