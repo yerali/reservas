@@ -172,8 +172,11 @@
 
     <!-- 
         INSTRUCCIONES PARA EL PROFESOR:
-        Para RESETEAR TODOS LOS SLOTS y borrar todas las inscripciones,
-        haz DOBLE CLIC en el título "Inscripción por Slots - Día 2"
+        Para RESETEAR TODOS LOS SLOTS y borrar todas las inscripciones:
+        1. Haz DOBLE CLIC en el título "Inscripción por Slots - Día 2"
+        2. Introduce la contraseña: profesor2025
+        
+        NOTA: Puedes cambiar la contraseña editando el archivo y buscando "profesor2025"
     -->
 
     <!-- Firebase SDK -->
@@ -339,6 +342,15 @@
 
             // Handle reset (professor only - double click on title)
             async function handleReset() {
+                const password = prompt('🔒 ACCESO DE PROFESOR\n\nIntroduce la contraseña para resetear todos los slots:');
+                
+                if (password === null) return; // Usuario canceló
+                
+                if (password !== 'profesor2025') {
+                    alert('❌ Contraseña incorrecta');
+                    return;
+                }
+                
                 if (confirm('⚠️ ATENCIÓN PROFESOR ⚠️\n\n¿Seguro que quieres BORRAR TODAS las inscripciones?\n\nEsta acción NO se puede deshacer.')) {
                     try {
                         const promises = allSlots.map(slot => 
